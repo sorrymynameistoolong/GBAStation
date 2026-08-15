@@ -77,7 +77,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # sdkmanager stops reading after the final license. Disable pipefail
+          # for this pipeline so yes receiving SIGPIPE is not treated as an error.
+          set +o pipefail
           yes | sdkmanager --licenses >/dev/null
+          set -o pipefail
           sdkmanager \
             "platform-tools" \
             "platforms;android-${ANDROID_API_LEVEL}" \
