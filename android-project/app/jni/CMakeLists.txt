@@ -21,6 +21,10 @@ set(SDL_SHARED ON CACHE BOOL "Build SDL as the library loaded by SDLActivity" FO
 set(SDL_STATIC OFF CACHE BOOL "Avoid packaging an unused static SDL copy" FORCE)
 set(SDL_TEST OFF CACHE BOOL "Disable SDL test support" FORCE)
 set(SDL_TESTS OFF CACHE BOOL "Disable SDL test executables" FORCE)
+# mGBA can discover a host SQLite installation during CMake configuration, but
+# that header and library do not belong to the Android NDK sysroot. Disable its
+# optional game-database feature for Android instead of linking host artifacts.
+set(USE_SQLITE3 OFF CACHE BOOL "Disable mGBA SQLite3 support on Android" FORCE)
 
 add_subdirectory(SDL)
 
