@@ -2,7 +2,11 @@
 
 #include <borealis.hpp>
 
+#if defined(__ANDROID__)
+#define NANOVG_GLES2 1
+#else
 #define NANOVG_GL3 1
+#endif
 #include <borealis/extern/nanovg/nanovg_gl.h>
 
 namespace
@@ -40,9 +44,15 @@ namespace beiklive::pico8
                      0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
         glBindTexture(GL_TEXTURE_2D, 0);
 
+#if defined(__ANDROID__)
+        m_image = nvglCreateImageFromHandleGLES2(
+            vg, m_texture, PICO8_WIDTH, PICO8_HEIGHT,
+            NVG_IMAGE_NODELETE | NVG_IMAGE_NEAREST);
+#else
         m_image = nvglCreateImageFromHandleGL3(
             vg, m_texture, PICO8_WIDTH, PICO8_HEIGHT,
             NVG_IMAGE_NODELETE | NVG_IMAGE_NEAREST);
+#endif
         if (m_image <= 0) {
             glDeleteTextures(1, &m_texture);
             m_texture = 0;

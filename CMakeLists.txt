@@ -215,6 +215,12 @@ list(FILTER MAIN_SRC EXCLUDE REGEX ".*/src/emulator/melonds/.*")
 list(FILTER MAIN_SRC EXCLUDE REGEX ".*/src/emulator/genesis/.*")
 list(FILTER MAIN_SRC EXCLUDE REGEX ".*/src/game/mgba/.*")
 list(FILTER MAIN_SRC EXCLUDE REGEX ".*/src/tests/.*")
+if (PLATFORM_ANDROID)
+    # Android uses AppUpdaterAndroid.cpp, a no-network stub. The desktop
+    # implementation depends on libcurl and platform-specific self-update.
+    list(FILTER MAIN_SRC EXCLUDE REGEX ".*/src/core/AppUpdater\\.cpp$")
+    list(FILTER MAIN_SRC EXCLUDE REGEX ".*/src/core/SteamGridDb\\.cpp$")
+endif()
 list(APPEND MAIN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/third_party/miniz/miniz.c)
 list(APPEND MAIN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/third_party/mongoose/mongoose.c)
 list(APPEND MAIN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/third_party/qrcodegen/qrcodegen.cpp)

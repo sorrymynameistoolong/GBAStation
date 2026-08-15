@@ -46,6 +46,10 @@ set(FFMPEG_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/FFmpeg)
 # Keep a self-contained source copy under each CMake build directory so
 # Windows and Switch never share architecture-specific static archives.
 set(FFMPEG_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/ffmpeg-background-audio)
+# Imported FFmpeg targets expose this directory for generated configuration
+# headers. It must exist during CMake configure for each Android ABI, before
+# the custom FFmpeg build command populates it.
+file(MAKE_DIRECTORY ${FFMPEG_BUILD_DIR})
 set(FFMPEG_BUILD_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/configure_ffmpeg_minimal.sh)
 # The configured copy is regenerated whenever the vendored source changes.
 # Without this dependency CMake can retain archives from a prior platform or
@@ -72,8 +76,25 @@ else()
 endif()
 if (PLATFORM_SWITCH)
     set(FFMPEG_TARGET_KIND switch)
+    set(FFMPEG_TARGET_TRIPLE "")
+    set(FFMPEG_SYSROOT "")
+elseif (PLATFORM_ANDROID)
+    set(FFMPEG_TARGET_KIND android)
+    # The NDK toolchain carries its target on each compiler invocation rather
+    # than consistently exposing CMAKE_C_COMPILER_TARGET in the cache.
+    # GBAStation's Android minSdk is 24 (see android-project/app/build.gradle).
+    if (CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a")
+        set(FFMPEG_TARGET_TRIPLE "aarch64-linux-android24")
+    elseif (CMAKE_ANDROID_ARCH_ABI STREQUAL "armeabi-v7a")
+        set(FFMPEG_TARGET_TRIPLE "armv7a-linux-androideabi24")
+    else()
+        message(FATAL_ERROR "Unsupported Android ABI for FFmpeg: ${CMAKE_ANDROID_ARCH_ABI}")
+    endif()
+    set(FFMPEG_SYSROOT "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/sysroot")
 else()
     set(FFMPEG_TARGET_KIND native)
+    set(FFMPEG_TARGET_TRIPLE "")
+    set(FFMPEG_SYSROOT "")
 endif()
 
 set(FFMPEG_STATIC_LIBRARIES
@@ -88,6 +109,7 @@ add_custom_command(
     COMMAND ${FFMPEG_SHELL} ${FFMPEG_BUILD_SCRIPT}
             ${FFMPEG_SOURCE_DIR} ${FFMPEG_BUILD_DIR}
             ${FFMPEG_CC} ${FFMPEG_AR} ${FFMPEG_RANLIB} ${FFMPEG_TARGET_KIND}
+            ${FFMPEG_TARGET_TRIPLE} ${FFMPEG_SYSROOT}
     DEPENDS ${FFMPEG_SOURCE_FILES} ${FFMPEG_BUILD_SCRIPT}
     COMMENT "Building minimal FFmpeg (MP4/H.264 background decoder)"
     VERBATIM
@@ -98,9 +120,10 @@ function(add_ffmpeg_static_library TARGET_NAME LIBRARY_PATH)
     add_library(${TARGET_NAME} STATIC IMPORTED GLOBAL)
     set_target_properties(${TARGET_NAME} PROPERTIES
         IMPORTED_LOCATION ${LIBRARY_PATH}
-        # Public FFmpeg headers are source files.  Generated configuration
-        # headers are consumed only while building the isolated static libs.
-        INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_SOURCE_DIR}"
+        # Public FFmpeg headers are source files, while configure emits
+        # avconfig.h and related platform headers under the isolated build
+        # directory. Consumers need both, with generated headers first.
+        INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_BUILD_DIR};${FFMPEG_SOURCE_DIR}"
     )
     add_dependencies(${TARGET_NAME} ffmpeg_minimal)
 endfunction()
@@ -268,10 +291,21 @@ function(add_isolated_libretro_core TARGET OBJECT_TARGET PREFIX)
     add_dependencies(${_raw_target} ${OBJECT_TARGET})
     set_target_properties(${_raw_target} PROPERTIES LINKER_LANGUAGE C)
 
+    set(_reloc_linker_args)
+    if (CMAKE_SYSTEM_NAME STREQUAL "Android")
+        # Custom commands do not automatically inherit the target triple that
+        # the Android toolchain passes to CMake targets.  Supply it explicitly
+        # so clang -r merges ARM objects as ARM objects rather than x86_64.
+        list(APPEND _reloc_linker_args
+            "--target=${CMAKE_CXX_COMPILER_TARGET}"
+            "--sysroot=${CMAKE_SYSROOT}"
+        )
+    endif()
+
     add_custom_command(
         OUTPUT "${_out_obj}"
         COMMAND ${CMAKE_COMMAND} -E rm -f "${_tmp_obj}" "${_out_obj}"
-        COMMAND ${CMAKE_CXX_COMPILER} -r -o "${_tmp_obj}"
+        COMMAND ${CMAKE_CXX_COMPILER} ${_reloc_linker_args} -r -o "${_tmp_obj}"
                 -Wl,--whole-archive "$<TARGET_FILE:${_raw_target}>" -Wl,--no-whole-archive
         COMMAND ${CMAKE_OBJCOPY} ${_keep_args} "${_tmp_obj}" "${_out_obj}"
         DEPENDS ${_raw_target}
@@ -469,6 +503,11 @@ target_compile_definitions(snes9x_core PRIVATE
     HAVE_STDINT_H
     HAVE_STRINGS_H
 )
+if (PLATFORM_ANDROID)
+    # NDK headers expose fseeko/ftello only when the POSIX API level is
+    # requested. Android uses 64-bit off_t, which preserves ZIP64 support.
+    target_compile_definitions(snes9x_core PRIVATE _POSIX_C_SOURCE=200809L)
+endif()
 
 # Snes9x 需要 zlib（unzip 功能）；优先使用 mGBA 内建的 zlibstatic
 if (TARGET zlibstatic)

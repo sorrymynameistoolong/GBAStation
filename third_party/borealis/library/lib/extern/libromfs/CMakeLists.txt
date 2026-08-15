@@ -22,7 +22,10 @@ elseif (NOT EXISTS ${LIBROMFS_RESOURCE_LOCATION} OR NOT IS_DIRECTORY ${LIBROMFS_
     message(FATAL_ERROR "LIBROMFS_RESOURCE_LOCATION has been defined but does not point to a valid folder")
 endif ()
 
-set(LIBROMFS_LIBRARY libromfs-${LIBROMFS_PROJECT_NAME} PARENT_SCOPE)
+# The nested lib directory creates its library with this CMake project's
+# name. Export the actual target so downstream consumers receive its headers
+# and do not fall back to a non-existent -l library name.
+set(LIBROMFS_LIBRARY ${PROJECT_NAME} PARENT_SCOPE)
 
 # Add libromfs components
 if(NOT LIBROMFS_PREBUILT_GENERATOR)

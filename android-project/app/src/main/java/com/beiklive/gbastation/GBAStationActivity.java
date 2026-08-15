@@ -20,7 +20,7 @@ public class GBAStationActivity extends SDLActivity {
     @Override
     protected String[] getLibraries() {
         return new String[] {
-            "SDL3",
+            "SDL2",
             "GBAStation"
         };
     }

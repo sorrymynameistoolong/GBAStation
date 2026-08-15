@@ -56,3 +56,13 @@ third_party/FFmpeg/libav*/lib*.version
 
 AGENTS.md
 .DS_Store
+
+# Android packaging intermediates and generated source links
+android-project/app/.cxx/
+android-project/app/build/
+android-project/app/jni/SDL
+android-project/app/jni/borealis
+dist/
+android-debug-*.log
+android-debug-*.exit
+android-debug-*.pid

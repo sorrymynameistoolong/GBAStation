@@ -510,11 +510,11 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 
    // It's better if the size is based on NTSC_WIDTH if the filter is on
    const retro_game_geometry geom = {
-      Api::Video::Output::WIDTH - (overscan_h_left + overscan_h_right),
-      Api::Video::Output::HEIGHT - (overscan_v_top + overscan_v_bottom),
-      Api::Video::Output::NTSC_WIDTH,
-      Api::Video::Output::HEIGHT,
-      get_aspect_ratio(),
+      static_cast<unsigned>(Api::Video::Output::WIDTH - (overscan_h_left + overscan_h_right)),
+      static_cast<unsigned>(Api::Video::Output::HEIGHT - (overscan_v_top + overscan_v_bottom)),
+      static_cast<unsigned>(Api::Video::Output::NTSC_WIDTH),
+      static_cast<unsigned>(Api::Video::Output::HEIGHT),
+      static_cast<float>(get_aspect_ratio()),
    };
    info->geometry = geom;
 }

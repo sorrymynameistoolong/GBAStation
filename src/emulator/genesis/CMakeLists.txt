@@ -1,4 +1,8 @@
-set(GENESIS_PLUS_GX_DIR ${CMAKE_SOURCE_DIR}/third_party/Genesis-Plus-GX)
+# CMAKE_SOURCE_DIR is the JNI directory when Android Gradle invokes CMake.
+# Resolve the application root relative to this file instead, so this core
+# works identically for desktop, Switch, and Android builds.
+get_filename_component(GBASTATION_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}/../../.." REALPATH)
+set(GENESIS_PLUS_GX_DIR "${GBASTATION_ROOT_DIR}/third_party/Genesis-Plus-GX")
 
 set(GENESIS_PLUS_GX_SOURCES
     ${GENESIS_PLUS_GX_DIR}/core/genesis.c
@@ -101,8 +105,8 @@ add_library(genesis_core STATIC
 )
 target_include_directories(genesis_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}/src
+    ${GBASTATION_ROOT_DIR}
+    ${GBASTATION_ROOT_DIR}/src
 )
 target_include_directories(genesis_core PRIVATE
     ${GENESIS_PLUS_GX_DIR}/core
@@ -121,4 +125,10 @@ target_compile_definitions(genesis_core PRIVATE
     LSB_FIRST
 )
 target_link_libraries(genesis_core PUBLIC genesis_plus_gx_core borealis)
+# Borealis view headers include romfs/romfs.hpp when ROM resources are enabled.
+# GenesisCore includes application headers before the final app target links
+# libromfs, so it must receive that usage requirement directly.
+if (TARGET "libromfs_base-${PROJECT_NAME}")
+    target_link_libraries(genesis_core PUBLIC "libromfs_base-${PROJECT_NAME}")
+endif()
 set_target_properties(genesis_core PROPERTIES C_STANDARD 11 CXX_STANDARD 17)

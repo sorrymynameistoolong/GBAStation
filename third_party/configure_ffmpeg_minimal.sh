@@ -8,6 +8,8 @@ CC="$3"
 AR="$4"
 RANLIB="$5"
 TARGET_KIND="$6"
+TARGET_TRIPLE="${7:-}"
+SYSROOT="${8:-}"
 
 # The parent process can be launched from cmd.exe with a stripped PATH.
 # Bootstrap MSYS's core tools before the first mkdir/cd invocation. FFmpeg
@@ -73,6 +75,23 @@ OPTIONS=(
 
 if [ "$TARGET_KIND" = "switch" ]; then
     OPTIONS+=(--arch=aarch64 --cpu=cortex-a57 --target-os=none --enable-cross-compile)
+elif [ "$TARGET_KIND" = "android" ]; then
+    if [ -z "$TARGET_TRIPLE" ] || [ -z "$SYSROOT" ]; then
+        echo "Android FFmpeg build requires an NDK target triple and sysroot." >&2
+        exit 64
+    fi
+    # CMake already points CC/AR/RANLIB at the Android NDK. Configure needs
+    # the same target and sysroot to prevent host ELF objects entering the
+    # static archives linked into the APK.
+    OPTIONS+=(
+        "--target-os=android"
+        "--arch=${TARGET_TRIPLE%%-*}"
+        --enable-cross-compile
+        "--sysroot=$SYSROOT"
+        "--extra-cflags=--target=$TARGET_TRIPLE --sysroot=$SYSROOT"
+        "--extra-ldflags=--target=$TARGET_TRIPLE --sysroot=$SYSROOT"
+        --disable-asm
+    )
 else
     OPTIONS+=(--disable-asm)
 fi

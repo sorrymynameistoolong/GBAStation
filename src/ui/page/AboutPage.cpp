@@ -9,18 +9,27 @@
 #include "core/AppUpdater.hpp"
 #include "core/Tools.hpp"
 #include <borealis/views/applet_frame.hpp>
+#if !defined(__ANDROID__)
 #include <curl/curl.h>
+#endif
 #include <miniz.h>
 #include <algorithm>
 #include <array>
 #include <cctype>
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
 #include <sstream>
 
 namespace beiklive {
+
+#if defined(__ANDROID__)
+using TransferSize = std::int64_t;
+#else
+using TransferSize = curl_off_t;
+#endif
 
 static constexpr const char* RESOURCE_MANIFEST_URL =
     "https://file.beiklive.top/file/GBAStation/res_version.json";
@@ -65,6 +74,14 @@ static std::string cacheBustedUrl(const std::string& url) {
 static bool fetchTextUrl(const std::string& url,
                          std::string& body,
                          const std::atomic<bool>* cancelFlag = nullptr) {
+#if defined(__ANDROID__)
+    // Android packages do not ship desktop libcurl. Online resource sync is
+    // intentionally deferred to an Android networking implementation.
+    (void)url;
+    (void)cancelFlag;
+    body.clear();
+    return false;
+#else
     CURL* curl = curl_easy_init();
     if (!curl)
         return false;
@@ -98,6 +115,7 @@ static bool fetchTextUrl(const std::string& url,
 
     return (!cancelFlag || !cancelFlag->load())
         && result == CURLE_OK && statusCode == 200 && !body.empty();
+#endif
 }
 
 static std::filesystem::path resourceVersionIniPath() {
@@ -252,10 +270,11 @@ static void showMessageDialog(const std::string& message) {
     dlg->open();
 }
 
+#if !defined(__ANDROID__)
 static bool downloadFileToPath(const std::string& url,
                                const std::string& outPath,
                                const std::atomic<bool>* cancelFlag = nullptr,
-                               std::function<void(curl_off_t, curl_off_t)> progressCallback = nullptr) {
+                               std::function<void(TransferSize, TransferSize)> progressCallback = nullptr) {
     CURL* curl = curl_easy_init();
     if (!curl)
         return false;
@@ -281,7 +300,7 @@ static bool downloadFileToPath(const std::string& url,
 
     struct ProgressContext {
         const std::atomic<bool>* cancelFlag;
-        std::function<void(curl_off_t, curl_off_t)> callback;
+        std::function<void(TransferSize, TransferSize)> callback;
     } progressContext{cancelFlag, std::move(progressCallback)};
 
     curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
@@ -320,6 +339,18 @@ static bool downloadFileToPath(const std::string& url,
     out.write(reinterpret_cast<const char*>(body.data()), body.size());
     return out.good();
 }
+#else
+static bool downloadFileToPath(const std::string& url,
+                               const std::string& outPath,
+                               const std::atomic<bool>* cancelFlag = nullptr,
+                               std::function<void(TransferSize, TransferSize)> progressCallback = nullptr) {
+    (void)url;
+    (void)outPath;
+    (void)cancelFlag;
+    (void)progressCallback;
+    return false;
+}
+#endif
 
 static std::string zipBaseName(const std::string& name) {
     auto pos = name.find_last_of("/\\");
@@ -1927,7 +1958,7 @@ private:
     }
 };
 
-static std::string formatTransferSize(curl_off_t bytes) {
+static std::string formatTransferSize(TransferSize bytes) {
     if (bytes < 1024)
         return std::to_string(static_cast<long long>(bytes)) + " B";
     if (bytes < 1024 * 1024)
@@ -2017,7 +2048,7 @@ static void startResourceDownload(const OnlineResourceItem& item,
 
         auto lastDownloadUpdate = std::make_shared<std::chrono::steady_clock::time_point>();
         auto downloadProgress = [progressDialog, lastDownloadUpdate](
-                                    curl_off_t downloaded, curl_off_t total) {
+                                    TransferSize downloaded, TransferSize total) {
             const auto now = std::chrono::steady_clock::now();
             const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                 now - *lastDownloadUpdate).count();
@@ -3377,6 +3408,7 @@ void AboutPage::_updateCheatDatabase() {
         brls::sync([prog]() { prog->setStatus(L("正在下载...")); });
 
         bool downloadOk = false;
+#if !defined(__ANDROID__)
         {
             CURL* curl = curl_easy_init();
             if (curl && !cancelFlag->load()) {
@@ -3413,6 +3445,12 @@ void AboutPage::_updateCheatDatabase() {
                 curl_easy_cleanup(curl);
             }
         }
+#else
+        // Android packaging deliberately omits libcurl. Keep the existing
+        // manual-download fallback below until this feature is implemented
+        // through an Android networking client.
+        (void) kUrl;
+#endif
 
         if (cancelFlag->load()) {
             brls::sync([prog, cancelFlag]() { delete cancelFlag; prog->close(); });

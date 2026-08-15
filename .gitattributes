@@ -1,0 +1,4 @@
+# Shell entry points must retain LF line endings so their shebangs are portable.
+*.sh text eol=lf
+android-project/gradlew text eol=lf
+android-project/gradlew.bat text eol=crlf
