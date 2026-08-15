@@ -1,0 +1,119 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: APK variant to build
+        required: true
+        default: debug
+        type: choice
+        options:
+          - debug
+          - release
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-android.yml
+      - .gitattributes
+      - .gitignore
+      - CMakeLists.txt
+      - androidbuild.sh
+      - android-project/**
+      - src/**
+      - third_party/**
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-android.yml
+      - .gitattributes
+      - .gitignore
+      - CMakeLists.txt
+      - androidbuild.sh
+      - android-project/**
+      - src/**
+      - third_party/**
+
+# The workflow only compiles and uploads an artifact. It does not require a
+# token capable of modifying repository contents or publishing releases.
+permissions:
+  contents: read
+
+jobs:
+  build-android:
+    name: Android (${{ inputs.variant || 'debug' }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      ANDROID_API_LEVEL: '36'
+      ANDROID_BUILD_TOOLS: '36.0.0'
+      ANDROID_CMAKE_VERSION: '3.22.1'
+      ANDROID_NDK_VERSION: '28.2.13676358'
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21 and Gradle cache
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Set up Android SDK command-line tools
+        uses: android-actions/setup-android@v3
+
+      - name: Install host build tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends cmake g++ ninja-build unzip
+
+      - name: Install fixed Android SDK components
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-${ANDROID_API_LEVEL}" \
+            "build-tools;${ANDROID_BUILD_TOOLS}" \
+            "cmake;${ANDROID_CMAKE_VERSION}" \
+            "ndk;${ANDROID_NDK_VERSION}"
+          echo "ANDROID_SDK_ROOT=${ANDROID_HOME}" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=${ANDROID_HOME}" >> "$GITHUB_ENV"
+
+      - name: Build Android APK
+        id: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          variant='${{ inputs.variant || 'debug' }}'
+          chmod +x ./androidbuild.sh
+          ./androidbuild.sh "$variant"
+          echo "variant=$variant" >> "$GITHUB_OUTPUT"
+
+      - name: Verify dual-ABI APK and write checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          apks=(dist/android/*.apk)
+          test "${#apks[@]}" -gt 0
+          for apk in "${apks[@]}"; do
+            unzip -Z1 "$apk" | grep -qx 'lib/arm64-v8a/libGBAStation.so'
+            unzip -Z1 "$apk" | grep -qx 'lib/armeabi-v7a/libGBAStation.so'
+          done
+          sha256sum "${apks[@]}" | tee dist/android/SHA256SUMS.txt
+
+      - name: Upload Android APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GBAStation-Android-${{ steps.build.outputs.variant }}-${{ github.sha }}
+          path: dist/android/
+          if-no-files-found: error
+          retention-days: 30

@@ -57,6 +57,9 @@ third_party/FFmpeg/libav*/lib*.version
 AGENTS.md
 .DS_Store
 
+# Keep the Android CI workflow tracked despite the generic build-* rule above.
+!.github/workflows/build-android.yml
+
 # Android packaging intermediates and generated source links
 android-project/app/.cxx/
 android-project/app/build/
