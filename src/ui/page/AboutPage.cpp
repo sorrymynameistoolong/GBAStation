@@ -122,7 +122,7 @@ static std::filesystem::path resourceVersionIniPath() {
 #ifdef __SWITCH__
     return std::filesystem::path("sdmc:/GBAStation/update/res_version.ini");
 #else
-    return std::filesystem::path(beiklive::path::ROOT)
+    return std::filesystem::path(beiklive::path::rootPath())
         / beiklive::path::PROGRAM_NAME / "update" / "res_version.ini";
 #endif
 }

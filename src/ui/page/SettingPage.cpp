@@ -2256,6 +2256,7 @@ private:
                                   const std::string& defaultPath,
                                   const std::string& returnKey)
     {
+#if defined(__SWITCH__)
         m_coreItems.push_back(_action(
             coreName + L(" NRO 路径"), L("链式调用时启动的外部核心 Stub"), beiklive::material::DESCRIPTION,
             [pathKey, defaultPath]() {
@@ -2270,6 +2271,15 @@ private:
                 return p.empty() ? L("未设置  >") : beiklive::tools::getFileName(p) + "  >";
             },
             [this, returnKey]() { _pickFile(returnKey, {"nro"}); }));
+#else
+        // Standalone .nro cores and their return paths are Switch-only. Keep
+        // the common settings pages useful on Android and desktop platforms
+        // by omitting controls that cannot produce a runnable configuration.
+        (void)coreName;
+        (void)pathKey;
+        (void)defaultPath;
+        (void)returnKey;
+#endif
     }
 
     void _appendExternalDisplaySettings(const std::string& prefix,

@@ -439,7 +439,7 @@ namespace
 
 std::string rootDirectory()
 {
-    return beiklive::path::ROOT + beiklive::path::SPLIT_CHAR +
+    return beiklive::path::rootPath() + beiklive::path::SPLIT_CHAR +
         beiklive::path::PROGRAM_NAME + beiklive::path::SPLIT_CHAR +
         "SteamGirdDB";
 }

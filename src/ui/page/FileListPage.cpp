@@ -893,7 +893,12 @@ namespace beiklive
 
     void FileListPage::showDriveList()
     {
-#ifndef _WIN32
+#if defined(__ANDROID__)
+        // Scoped storage does not grant a native file browser reliable access
+        // to `/`. Start from the application's writable ROM directory instead.
+        setPath(beiklive::path::romPath());
+        return;
+#elif !defined(_WIN32)
         setPath("/");
         return;
 #endif

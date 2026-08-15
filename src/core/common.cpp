@@ -565,10 +565,12 @@ namespace beiklive
         SettingManager->SetDefault(KEY_REWIND_UI_ITEM_COUNT, ConfigValue(10));
         SettingManager->SetDefault(KEY_REWIND_THUMB_COMPRESSION, ConfigValue(0));
 
-        // NDS Deko 实验路径：页面分流和 Deko probe 分开控制，避免一开 NDS 就触发图形上下文切换。
+        // NDS Deko experiments and standalone NRO launchers are Switch-only.
+        // Do not seed Android with unusable sdmc:/ or .nro paths.
         SettingManager->SetDefault("nds.dekoMode.enabled", ConfigValue(0));
         SettingManager->SetDefault("nds.dekoMode.probe.enabled", ConfigValue(0));
         SettingManager->SetDefault("nds.dekoMode.probe.level", ConfigValue(1));
+#if defined(__SWITCH__)
         SettingManager->SetDefault("nds.externalNro.enabled", ConfigValue(1));
         SettingManager->SetDefault("nds.externalNro.path", ConfigValue(std::string("/GBAStation/core/GBAStationNDSStub.nro")));
         SettingManager->SetDefault("nds.externalNro.returnPath", ConfigValue(std::string("sdmc:/switch/GBAStation.nro")));
@@ -586,6 +588,9 @@ namespace beiklive
         SettingManager->SetDefault("saturn.externalNro.returnPath", ConfigValue(std::string("sdmc:/switch/GBAStation.nro")));
         SettingManager->SetDefault("dolphin.externalNro.path", ConfigValue(std::string("/GBAStation/core/GBAStationDolphinStub.nro")));
         SettingManager->SetDefault("dolphin.externalNro.returnPath", ConfigValue(std::string("sdmc:/switch/GBAStation.nro")));
+#else
+        SettingManager->SetDefault("nds.externalNro.enabled", ConfigValue(0));
+#endif
         if (auto pathValue = SettingManager->Get("nds.externalNro.path"))
         {
             const auto path = pathValue->AsString().value_or("");
@@ -704,9 +709,15 @@ namespace beiklive
         SettingManager->SetDefault("core.gambatte_gbc_color_correction", ConfigValue(std::string("disabled")));
         SettingManager->SetDefault("core.gambatte_mix_frames", ConfigValue(std::string("disabled")));
 
-        SettingManager->SetDefault("core.melonds_bios9_path", ConfigValue(std::string("sdmc:/GBAStation/bios/nds/bios9.bin")));
-        SettingManager->SetDefault("core.melonds_bios7_path", ConfigValue(std::string("sdmc:/GBAStation/bios/nds/bios7.bin")));
-        SettingManager->SetDefault("core.melonds_firmware_path", ConfigValue(std::string("sdmc:/GBAStation/bios/nds/firmware.bin")));
+#if defined(__SWITCH__)
+        const std::string ndsBiosDirectory = "sdmc:/GBAStation/bios/nds";
+#else
+        const std::string ndsBiosDirectory =
+            (std::filesystem::path(beiklive::path::biosPath()) / "nds").string();
+#endif
+        SettingManager->SetDefault("core.melonds_bios9_path", ConfigValue(ndsBiosDirectory + "/bios9.bin"));
+        SettingManager->SetDefault("core.melonds_bios7_path", ConfigValue(ndsBiosDirectory + "/bios7.bin"));
+        SettingManager->SetDefault("core.melonds_firmware_path", ConfigValue(ndsBiosDirectory + "/firmware.bin"));
         SettingManager->SetDefault("core.melonds_direct_boot", ConfigValue(1));
         SettingManager->SetDefault("core.melonds_jit_enabled", ConfigValue(1));
         SettingManager->SetDefault("core.melonds_jit_block_size", ConfigValue(std::string("32")));

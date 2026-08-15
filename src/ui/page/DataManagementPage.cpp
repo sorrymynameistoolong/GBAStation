@@ -517,7 +517,7 @@ bool exportThreeDsCoreConfigForDataPage()
     const std::filesystem::path dir("sdmc:/GBAStation/3ds/config/cores");
     const std::filesystem::path file("sdmc:/GBAStation/3ds/config/cores/azahar.jsonc");
 #else
-    const std::filesystem::path dir = std::filesystem::path(beiklive::path::ROOT) /
+    const std::filesystem::path dir = std::filesystem::path(beiklive::path::rootPath()) /
         "GBAStation" / "3ds" / "config" / "cores";
     const std::filesystem::path file = dir / "azahar.jsonc";
 #endif

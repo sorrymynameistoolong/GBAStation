@@ -575,7 +575,8 @@ fs::path fileBrowserRoot()
     return fs::path("sdmc:/");
 #else
     std::error_code ec;
-    fs::path root = beiklive::path::ROOT.empty() ? fs::current_path(ec) : fs::path(beiklive::path::ROOT);
+    const std::string& configuredRoot = beiklive::path::rootPath();
+    fs::path root = configuredRoot.empty() ? fs::current_path(ec) : fs::path(configuredRoot);
     fs::path canonical = fs::weakly_canonical(root, ec);
     return ec ? root : canonical;
 #endif
@@ -636,7 +637,7 @@ std::vector<fs::path> listImageFiles(const std::string& gameId = "")
 {
     std::vector<fs::path> images;
     std::vector<fs::path> roots = {
-        fs::path(beiklive::path::ROOT) / beiklive::path::PROGRAM_NAME / "logos",
+        fs::path(beiklive::path::rootPath()) / beiklive::path::PROGRAM_NAME / "logos",
     };
     ensureDir(roots.front().string());
 
