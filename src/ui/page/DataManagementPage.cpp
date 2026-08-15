@@ -1,5 +1,6 @@
 #include "DataManagementPage.hpp"
 #include "core/Translation.hpp"
+#include "core/AndroidStorage.hpp"
 
 #include "ui/page/FileListPage.hpp"
 #include "ui/utils/UiHelper.hpp"
@@ -2220,6 +2221,20 @@ void DataManagementPage::refreshScanTab()
                      material::STORAGE, {}, &m_autoSubDir, false});
     items.push_back({L("读取映射名称"), L("存在名称映射时使用中文或规范化标题"), "",
                      material::EDIT, {}, &m_useNameMapping, false});
+#ifdef __ANDROID__
+    items.push_back({
+        L("从设备导入 ROM"),
+        L("使用 Android 系统文件选择器；选中的文件会复制到应用的 roms 目录"),
+        L("导入"),
+        material::STORAGE,
+        []() {
+            if (!beiklive::android_storage::requestRomImport())
+                brls::Application::notify(L("无法打开系统文件选择器"));
+        },
+        nullptr,
+        false,
+    });
+#endif
     for (size_t i = 0; i < kScanPlatformCount; ++i)
     {
         const std::string path = scanPathFor(static_cast<int>(i));

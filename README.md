@@ -119,7 +119,7 @@ GBASTATION_ANDROID_ABIS=arm64-v8a ./androidbuild.sh debug
 
 构建脚本会先编译主机端 `libromfs-generator`，再准备 JNI 源码链接、验证工具链、调用 Gradle，并将 APK 复制到 `dist/android/`。默认双 ABI Debug APK 包含 `lib/arm64-v8a/libGBAStation.so` 和 `lib/armeabi-v7a/libGBAStation.so`。Release 签名可选地由 `GBASTATION_KEYSTORE`、`GBASTATION_STORE_PASSWORD`、`GBASTATION_KEY_ALIAS` 与 `GBASTATION_KEY_PASSWORD` 四个环境变量提供。
 
-仓库中的 [Android CI 工作流](.github/workflows/build-android.yml) 在 push、Pull Request 和手动触发时使用固定工具链构建 Debug APK，检查两个 ABI 的原生库路径，并上传 APK 与 `SHA256SUMS` 构件。更多打包设计和已验证的构建记录请见 [ANDROID_PACKAGING.md](ANDROID_PACKAGING.md)。
+仓库中的 [Android CI 工作流](.github/workflows/build-android.yml) 在 push、Pull Request 和手动触发时使用固定工具链构建 Debug APK，检查两个 ABI 的原生库路径，并上传 APK 与 `SHA256SUMS` 构件。更多打包设计和已验证的构建记录请见 [ANDROID_PACKAGING.md](ANDROID_PACKAGING.md)。普通 Android 用户请阅读 [ANDROID_USER_GUIDE.md](ANDROID_USER_GUIDE.md)；存储权限、应用目录和 SAF 导入的审计结论请见 [ANDROID_SCOPED_STORAGE.md](ANDROID_SCOPED_STORAGE.md)。
 
 ### Windows
 

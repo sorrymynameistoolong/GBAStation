@@ -5,6 +5,7 @@
 #include <filesystem>
 
 #if defined(__ANDROID__)
+#include <SDL_filesystem.h>
 #include <SDL_system.h>
 #endif
 
@@ -22,8 +23,32 @@ inline std::string GetRootPath()
 #if defined(_WIN32)
     return ".";
 #elif defined(__ANDROID__)
+    // App-specific external storage is writable without broad media or storage
+    // permissions. It may be unavailable on removable/adoptable volumes, so
+    // fall back to SDL's internal app-specific preference path instead of `/`.
+    const int externalState = SDL_AndroidGetExternalStorageState();
     const char* externalFilesDir = SDL_AndroidGetExternalStoragePath();
-    return externalFilesDir && externalFilesDir[0] ? externalFilesDir : ".";
+    if ((externalState & SDL_ANDROID_EXTERNAL_STORAGE_WRITE) &&
+        externalFilesDir && externalFilesDir[0])
+        return externalFilesDir;
+
+    char* internalPrefPath = SDL_GetPrefPath(nullptr, "GBAStation");
+    if (internalPrefPath && internalPrefPath[0])
+    {
+        const std::string path(internalPrefPath);
+        SDL_free(internalPrefPath);
+        return path;
+    }
+    SDL_free(internalPrefPath);
+
+    const char* internalFilesDir = SDL_AndroidGetInternalStoragePath();
+    if (internalFilesDir && internalFilesDir[0])
+        return internalFilesDir;
+
+    // SDL's Android activity normally supplies one of the app-specific paths
+    // above. Keep the last-resort location inside this fixed application ID
+    // rather than falling back to the process working directory (`/`).
+    return "/data/data/com.beiklive.gbastation/files";
 #elif defined(__APPLE__)
     const char* home = std::getenv("HOME");
     return home && home[0]

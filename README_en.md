@@ -119,7 +119,7 @@ GBASTATION_ANDROID_ABIS=arm64-v8a ./androidbuild.sh debug
 
 The script builds the host-side `libromfs-generator`, prepares JNI source links, validates the fixed toolchain, invokes Gradle, and copies APKs into `dist/android/`. The default dual-ABI Debug APK contains `lib/arm64-v8a/libGBAStation.so` and `lib/armeabi-v7a/libGBAStation.so`. Release signing is optional and uses `GBASTATION_KEYSTORE`, `GBASTATION_STORE_PASSWORD`, `GBASTATION_KEY_ALIAS`, and `GBASTATION_KEY_PASSWORD` when all four variables are provided.
 
-The [Android CI workflow](.github/workflows/build-android.yml) uses the pinned toolchain for pushes, pull requests, and manual runs. It builds the Debug APK, validates the native-library path for both ABIs, and uploads the APK with `SHA256SUMS`. See [ANDROID_PACKAGING.md](ANDROID_PACKAGING.md) for package architecture and verified build records.
+The [Android CI workflow](.github/workflows/build-android.yml) uses the pinned toolchain for pushes, pull requests, and manual runs. It builds the Debug APK, validates the native-library path for both ABIs, and uploads the APK with `SHA256SUMS`. See [ANDROID_PACKAGING.md](ANDROID_PACKAGING.md) for package architecture and verified build records. Android users can follow [ANDROID_USER_GUIDE.md](ANDROID_USER_GUIDE.md); see [ANDROID_SCOPED_STORAGE.md](ANDROID_SCOPED_STORAGE.md) for the storage-permission, app-directory, and SAF-import audit.
 
 ### Windows
 
